@@ -311,7 +311,7 @@ void TestExcludeMinusWordsFromFindTopDocuments() {
 }
 
 //Сортировка найденных документов по релевантности.
-void TestRelevanceSortingOrder() {
+void TestRelevanceSorting() {
     SearchServer server;
     const int doc_id1 = 0;
     const string content1 = "scorpion in the ground"s;
@@ -429,7 +429,7 @@ void TestSearchServer() {
     TestAddDocument();
     TestExcludeStopWordsFromAddedDocumentContent();
     TestExcludeMinusWordsFromFindTopDocuments();
-    TestRelevanceSortingOrder();
+    TestRelevanceSorting();
     TestRatingCalc();
     TestRelevanceCalc();
     TestFindTopDocumentsWithStatus();
