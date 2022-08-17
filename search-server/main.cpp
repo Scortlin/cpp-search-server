@@ -276,6 +276,7 @@ void TestAddDocument() {
         const vector<int> ratings = { 1, 2, 3 };
         ASSERT(server.GetDocumentCount() == 0);
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        ASSERT(server.GetDocumentCount() == 1);
         const auto found_docs = server.FindTopDocuments("in"s);
         ASSERT_EQUAL(found_docs.size(), 1u);
         const Document& doc0 = found_docs[0];
@@ -312,11 +313,11 @@ void TestExcludeMinusWordsFromFindTopDocuments() {
     }
     {
         const int doc_id1 = 40;
-        const string content1 = "scorpion in the desert"s;
+        const string content1 = "zebra in the desert"s;
         const vector<int> ratings1 = { 4, 2, 3 };
         server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
-        const auto found_docs1 = server.FindTopDocuments("the scorpion"s);
-        ASSERT(found_docs1.size() == 2);
+        const auto found_docs1 = server.FindTopDocuments("the -scorpion"s);
+        ASSERT(found_docs1.size() == 1);
     }
 }
 
@@ -359,7 +360,7 @@ void TestRatingCalc() {
 // Фильтрация результатов поиска с использованием предиката, задаваемого пользователем.
 void TestPredicat() {
     SearchServer server;
-    server.SetStopWords("on in and"s);
+    server.SetStopWords("on in and"s); //если я уберу, то тест не проходит
     server.AddDocument(0, "straw hat and red head"s, DocumentStatus::ACTUAL, { -2, 9 });
     server.AddDocument(1, "white hat white car"s, DocumentStatus::ACTUAL, { 8, 8, 1 });
     server.AddDocument(2, "tall giraffe blue sky"s, DocumentStatus::ACTUAL, { -18, 6, 3, 1 });
@@ -370,7 +371,6 @@ void TestPredicat() {
     int i = 0;
     for (const Document& document : server.FindTopDocuments("white tall hat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
         ASSERT(document.id % 2 == 0);
-        ASSERT(doc[i] % 2 == 0);
         ASSERT(document.id == doc[i]);
         ++i;
     }
@@ -424,12 +424,12 @@ void TestRelevanceCalc() {
     const string content2 = "scorpion in the desert"s;
     const vector<int> ratings2 = { 1, 5, 9 };
 
-    const double relevance1 = 0.25 * log(2);
+    const double relevance1 = 0.25 * log(2); //TF*IDF 
     const double relevance2 = 0;
     SearchServer server;
     server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
     server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
-    const auto found_docs = server.FindTopDocuments("in desert"s);
+    const auto found_docs = server.FindTopDocuments("in ground"s);
     ASSERT_EQUAL(found_docs.size(), 2);
 
     const Document& doc0 = found_docs[0];
@@ -447,18 +447,28 @@ void TestMatchDocument() {
     server.AddDocument(3, "tall rabbit desert"s, DocumentStatus::BANNED, { 17,3 });
     server.AddDocument(4, "white rabbit desert"s, DocumentStatus::BANNED, { 8, 5 });
 
-    vector<vector<string>> correct_words = { {"hat"s},{"hat"s, "white"s},{},{},{} };
+    vector<vector<string>> correct_words = { {"hat"s}, {"hat"s, "white"s}, {}, {}, {} };
     const int doc_count = server.GetDocumentCount();
     vector<vector<string>> words;
     vector<int> id;
+    vector<DocumentStatus> Statuses;
     for (int doc_id = 0; doc_id < doc_count; ++doc_id) {
         const auto [word, status] = server.MatchDocument("white hat -rabbit"s, doc_id);
         words.push_back(word);
+        Statuses.push_back(status);
         id.push_back(doc_id);
     }
-
-    ASSERT(correct_words[0][0] == words[0][0]);
-    ASSERT(correct_words[1][0] == words[1][0]);
+    for (int k = 0; k <= 2; k++) {
+        ASSERT(Statuses[k] == DocumentStatus::ACTUAL);
+    }
+    for (int l = 3; l <= 4; l++) {
+        ASSERT(Statuses[l] == DocumentStatus::BANNED);
+    }
+    for (int i = 0; i <= 1; i++) {
+        for (int j = 0; j < 1; j++) {
+            ASSERT(correct_words[i][j] == words[i][j]);
+        }
+    }
     ASSERT(correct_words[1][1] == words[1][1]);
     ASSERT(words[0].size() == 1);
     ASSERT(words[1].size() == 2);
