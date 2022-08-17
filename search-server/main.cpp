@@ -8,8 +8,6 @@
 #include <vector>
 
 using namespace std;
-
-/* Подставьте вашу реализацию класса SearchServer сюда */
 /*struct Document {
     int id;
     double relevance;
@@ -276,6 +274,7 @@ void TestAddDocument() {
         const int doc_id = 42;
         const string content = "scorpion in the desert"s;
         const vector<int> ratings = { 1, 2, 3 };
+        ASSERT(server.GetDocumentCount() == 0);
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("in"s);
         ASSERT_EQUAL(found_docs.size(), 1u);
@@ -293,20 +292,31 @@ void TestAddDocument() {
         const Document& doc0 = found_docs[0];
         ASSERT(doc0.id == 42);
     }
+
+
+
 }
 //Поддержка минус-слов.
 void TestExcludeMinusWordsFromFindTopDocuments() {
-    const int doc_id = 42;
-    const string content = "scorpion in the desert"s;
-    const vector<int> ratings = { 1, 2, 3 };
+    SearchServer server;
     {
-        SearchServer server;
+        const int doc_id = 42;
+        const string content = "scorpion in the desert"s;
+        const vector<int> ratings = { 1, 2, 3 };
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("in"s);
         ASSERT_EQUAL(found_docs.size(), 1u);
         const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_id);
         ASSERT(server.FindTopDocuments("in -scorpion"s).empty());
+    }
+    {
+        const int doc_id1 = 40;
+        const string content1 = "scorpion in the desert"s;
+        const vector<int> ratings1 = { 4, 2, 3 };
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs1 = server.FindTopDocuments("the scorpion"s);
+        ASSERT(found_docs1.size() == 2);
     }
 }
 
@@ -337,13 +347,13 @@ void TestRatingCalc() {
     const int doc_id = 42;
     const string content = "scorpion in the ground"s;
     const vector<int> ratings = { 5, 7, 9 };
-    int Rating = (5 + 7 + 9) / static_cast<int>(ratings.size());
+    int rating = (5 + 7 + 9) / static_cast<int>(ratings.size());
 
     server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
     const auto found_docs = server.FindTopDocuments("the"s);
     ASSERT_EQUAL(found_docs.size(), 1u);
     const Document& doc0 = found_docs[0];
-    ASSERT_EQUAL(doc0.rating, Rating);
+    ASSERT_EQUAL(doc0.rating, rating);
 
 }
 // Фильтрация результатов поиска с использованием предиката, задаваемого пользователем.
@@ -359,7 +369,9 @@ void TestPredicat() {
     vector<int> doc = { 4, 0, 2 };
     int i = 0;
     for (const Document& document : server.FindTopDocuments("white tall hat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
-        ASSERT_EQUAL(document.id, doc[i]);
+        ASSERT(document.id % 2 == 0);
+        ASSERT(doc[i] % 2 == 0);
+        ASSERT(document.id == doc[i]);
         ++i;
     }
 
@@ -392,12 +404,12 @@ void TestFindTopDocumentsWithStatus() {
         }
     }
     {
-        vector<Document> Document1 = server.FindTopDocuments("white tall hat"s, DocumentStatus::IRRELEVANT);
-        ASSERT(Document1.empty());
+        const vector<Document> document1 = server.FindTopDocuments("white tall hat"s, DocumentStatus::IRRELEVANT);
+        ASSERT(document1.empty());
     }
     {
-        vector<Document> Document2 = server.FindTopDocuments("white tall hat"s, DocumentStatus::REMOVED);
-        ASSERT(Document2.empty());
+        const vector<Document> document2 = server.FindTopDocuments("white tall hat"s, DocumentStatus::REMOVED);
+        ASSERT(document2.empty());
     }
 
 
@@ -412,18 +424,47 @@ void TestRelevanceCalc() {
     const string content2 = "scorpion in the desert"s;
     const vector<int> ratings2 = { 1, 5, 9 };
 
+    const double relevance1 = 0.25 * log(2);
+    const double relevance2 = 0;
     SearchServer server;
     server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
     server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
-    const auto found_docs = server.FindTopDocuments("in garden"s);
+    const auto found_docs = server.FindTopDocuments("in desert"s);
     ASSERT_EQUAL(found_docs.size(), 2);
 
     const Document& doc0 = found_docs[0];
     const Document& doc1 = found_docs[1];
-    ASSERT(doc0.relevance <= 1e-6);
-    ASSERT(doc1.relevance <= 1e-6);
+    ASSERT(abs(doc0.relevance - relevance1) <= 1e-6);
+    ASSERT(abs(doc1.relevance - relevance2) <= 1e-6);
 }
+void TestMatchDocument() {
+    SearchServer server;
+    server.SetStopWords("in on and"s);
 
+    server.AddDocument(0, "straw hat and red head"s, DocumentStatus::ACTUAL, { -2, 9 });
+    server.AddDocument(1, "white hat white car"s, DocumentStatus::ACTUAL, { 8, 8, 1 });
+    server.AddDocument(2, "tall giraffe blue sky"s, DocumentStatus::ACTUAL, { -18, 6, 3, 1 });
+    server.AddDocument(3, "tall rabbit desert"s, DocumentStatus::BANNED, { 17,3 });
+    server.AddDocument(4, "white rabbit desert"s, DocumentStatus::BANNED, { 8, 5 });
+
+    vector<vector<string>> correct_words = { {"hat"s},{"hat"s, "white"s},{},{},{} };
+    const int doc_count = server.GetDocumentCount();
+    vector<vector<string>> words;
+    vector<int> id;
+    for (int doc_id = 0; doc_id < doc_count; ++doc_id) {
+        const auto [word, status] = server.MatchDocument("white hat -rabbit"s, doc_id);
+        words.push_back(word);
+        id.push_back(doc_id);
+    }
+
+    ASSERT(correct_words[0][0] == words[0][0]);
+    ASSERT(correct_words[1][0] == words[1][0]);
+    ASSERT(correct_words[1][1] == words[1][1]);
+    ASSERT(words[0].size() == 1);
+    ASSERT(words[1].size() == 2);
+    ASSERT(words[2].empty());
+    ASSERT(words[3].empty());
+}
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
     TestAddDocument();
@@ -434,6 +475,7 @@ void TestSearchServer() {
     TestRelevanceCalc();
     TestFindTopDocumentsWithStatus();
     TestPredicat();
+    TestMatchDocument();
 }
 
 // --------- Окончание модульных тестов поисковой системы -----------
