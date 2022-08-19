@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <numeric>
 
 using namespace std;
 /*struct Document {
@@ -42,10 +43,10 @@ public:
     vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const { // возвращает документы по убыванию рейтинга и релевантности
         const Query query = ParseQuery(raw_query);
         auto matched_documents = FindAllDocuments(query, document_predicate);
-
+        const double chislo_relevance =0.000001;
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document& lhs, const Document& rhs) {
-                if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                if (abs(lhs.relevance - rhs.relevance) < chislo_relevance) {
                     return lhs.rating > rhs.rating;
                 } else {
                     return lhs.relevance > rhs.relevance;
@@ -119,10 +120,10 @@ private:
         if (ratings.empty()) {
             return 0;
         }
-        int rating_sum = 0;
         for (const int rating : ratings) {
-            rating_sum += rating;
+            ratings.push_back(rating);
         }
+        int rating_sum = accumulate(ratings.begin(), ratings.end(), 0);
         return rating_sum / static_cast<int>(ratings.size());
     }
 
@@ -204,9 +205,9 @@ private:
         }
         return matched_documents;
     }
-};*/
+};
 
-/*template <typename T, typename U>
+template <typename T, typename U>
 void AssertEqualImpl(const T& t, const U& u, const string& t_str, const string& u_str, const string& file,
                      const string& func, unsigned line, const string& hint) {
     if (t != u) {
@@ -370,6 +371,7 @@ void TestPredicat() {
     vector<int> doc = { 4, 0, 2 };
     int i = 0;
     for (const Document& document : server.FindTopDocuments("white tall hat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
+        ASSERT(doc[i] <= server.FindTopDocuments("white tall hat"s).size() + 1);
         ASSERT(document.id % 2 == 0);
         ASSERT(document.id == doc[i]);
         ++i;
@@ -424,16 +426,20 @@ void TestRelevanceCalc() {
     const string content2 = "scorpion in the desert"s;
     const vector<int> ratings2 = { 1, 5, 9 };
 
-    const double relevance1 = 0.25 * log(2); //TF*IDF 
-    const double relevance2 = 0;
     SearchServer server;
     server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
     server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
-    const auto found_docs = server.FindTopDocuments("in ground"s);
-    ASSERT_EQUAL(found_docs.size(), 2);
+    const double idf = log(server.GetDocumentCount() * 1.0 / server.FindTopDocuments("ground"s).size());
+    const vector<string> words = SplitIntoWords(content1);
+    const double tf = 1.0 / words.size();
+    const auto found_docs = server.FindTopDocuments("ground"s);
+    ASSERT_EQUAL(found_docs.size(), 1);
 
     const Document& doc0 = found_docs[0];
     const Document& doc1 = found_docs[1];
+
+    const double relevance1 = idf * tf;
+    const double relevance2 = 0;
     ASSERT(abs(doc0.relevance - relevance1) <= 1e-6);
     ASSERT(abs(doc1.relevance - relevance2) <= 1e-6);
 }
@@ -451,29 +457,20 @@ void TestMatchDocument() {
     const int doc_count = server.GetDocumentCount();
     vector<vector<string>> words;
     vector<int> id;
-    vector<DocumentStatus> Statuses;
+    vector<DocumentStatus> statuses;
     for (int doc_id = 0; doc_id < doc_count; ++doc_id) {
         const auto [word, status] = server.MatchDocument("white hat -rabbit"s, doc_id);
         words.push_back(word);
-        Statuses.push_back(status);
+        statuses.push_back(status);
         id.push_back(doc_id);
     }
-    for (int k = 0; k <= 2; k++) {
-        ASSERT(Statuses[k] == DocumentStatus::ACTUAL);
-    }
-    for (int l = 3; l <= 4; l++) {
-        ASSERT(Statuses[l] == DocumentStatus::BANNED);
-    }
-    for (int i = 0; i <= 1; i++) {
-        for (int j = 0; j < 1; j++) {
-            ASSERT(correct_words[i][j] == words[i][j]);
-        }
-    }
+    ASSERT(statuses[0] == DocumentStatus::ACTUAL);
+    ASSERT(statuses[1] == DocumentStatus::ACTUAL);
+    ASSERT(correct_words[0][0] == words[0][0]);
     ASSERT(correct_words[1][1] == words[1][1]);
     ASSERT(words[0].size() == 1);
     ASSERT(words[1].size() == 2);
-    ASSERT(words[2].empty());
-    ASSERT(words[3].empty());
+
 }
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
