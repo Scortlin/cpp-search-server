@@ -9,7 +9,10 @@
 #include <numeric>
 
 using namespace std;
-/*struct Document {
+
+const double ACCURACY = 0.000001;
+/*const int MAX_RESULT_DOCUMENT_COUNT = 5;
+struct Document {
     int id;
     double relevance;
     int rating;
@@ -43,10 +46,9 @@ public:
     vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const { // возвращает документы по убыванию рейтинга и релевантности
         const Query query = ParseQuery(raw_query);
         auto matched_documents = FindAllDocuments(query, document_predicate);
-        const double chislo_relevance =0.000001;
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document& lhs, const Document& rhs) {
-                if (abs(lhs.relevance - rhs.relevance) < chislo_relevance) {
+                if (abs(lhs.relevance - rhs.relevance) < ACCURACY) {
                     return lhs.rating > rhs.rating;
                 } else {
                     return lhs.relevance > rhs.relevance;
@@ -119,9 +121,6 @@ private:
     static int ComputeAverageRating(const vector<int>& ratings) {//вычисление среднего рейтинга
         if (ratings.empty()) {
             return 0;
-        }
-        for (const int rating : ratings) {
-            ratings.push_back(rating);
         }
         int rating_sum = accumulate(ratings.begin(), ratings.end(), 0);
         return rating_sum / static_cast<int>(ratings.size());
@@ -370,8 +369,9 @@ void TestPredicat() {
 
     vector<int> doc = { 4, 0, 2 };
     int i = 0;
+    const auto res = server.FindTopDocuments("white tall hat").size();
+    ASSERT(doc.size() == res);
     for (const Document& document : server.FindTopDocuments("white tall hat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
-        ASSERT(doc[i] <= server.FindTopDocuments("white tall hat"s).size() + 1);
         ASSERT(document.id % 2 == 0);
         ASSERT(document.id == doc[i]);
         ++i;
@@ -432,16 +432,16 @@ void TestRelevanceCalc() {
     const double idf = log(server.GetDocumentCount() * 1.0 / server.FindTopDocuments("ground"s).size());
     const vector<string> words = SplitIntoWords(content1);
     const double tf = 1.0 / words.size();
-    const auto found_docs = server.FindTopDocuments("ground"s);
-    ASSERT_EQUAL(found_docs.size(), 1);
+    const auto found_docs = server.FindTopDocuments("in desert"s);
+    ASSERT_EQUAL(found_docs.size(), 2);
 
     const Document& doc0 = found_docs[0];
     const Document& doc1 = found_docs[1];
 
     const double relevance1 = idf * tf;
     const double relevance2 = 0;
-    ASSERT(abs(doc0.relevance - relevance1) <= 1e-6);
-    ASSERT(abs(doc1.relevance - relevance2) <= 1e-6);
+    ASSERT(abs(doc0.relevance - relevance1) <= ACCURACY);
+    ASSERT(abs(doc1.relevance - relevance2) <= ACCURACY);
 }
 void TestMatchDocument() {
     SearchServer server;
@@ -464,6 +464,10 @@ void TestMatchDocument() {
         statuses.push_back(status);
         id.push_back(doc_id);
     }
+    ASSERT(words.size() <= server.GetDocumentCount());
+    ASSERT(id.size() <= server.GetDocumentCount());
+    ASSERT(statuses.size() <= server.GetDocumentCount());
+
     ASSERT(statuses[0] == DocumentStatus::ACTUAL);
     ASSERT(statuses[1] == DocumentStatus::ACTUAL);
     ASSERT(correct_words[0][0] == words[0][0]);
