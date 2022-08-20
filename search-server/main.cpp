@@ -369,8 +369,8 @@ void TestPredicat() {
 
     vector<int> doc = { 4, 0, 2 };
     int i = 0;
-    const auto res = server.FindTopDocuments("white tall hat").size();
-    ASSERT(doc.size() == res);
+    const auto res = server.FindTopDocuments("white tall hat");
+    ASSERT(doc.size() == res.size());
     for (const Document& document : server.FindTopDocuments("white tall hat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
         ASSERT(document.id % 2 == 0);
         ASSERT(document.id == doc[i]);
@@ -454,23 +454,34 @@ void TestMatchDocument() {
     server.AddDocument(4, "white rabbit desert"s, DocumentStatus::BANNED, { 8, 5 });
 
     vector<vector<string>> correct_words = { {"hat"s}, {"hat"s, "white"s}, {}, {}, {} };
+    vector<DocumentStatus> correct_statuses = { DocumentStatus::ACTUAL,DocumentStatus::ACTUAL,DocumentStatus::ACTUAL,DocumentStatus::BANNED,DocumentStatus::BANNED };
+
     const int doc_count = server.GetDocumentCount();
     vector<vector<string>> words;
     vector<int> id;
     vector<DocumentStatus> statuses;
+    ASSERT(doc_count == correct_words.size());
+    ASSERT(doc_count == correct_statuses.size());
     for (int doc_id = 0; doc_id < doc_count; ++doc_id) {
         const auto [word, status] = server.MatchDocument("white hat -rabbit"s, doc_id);
         words.push_back(word);
+        ASSERT(word == words[doc_id]);
         statuses.push_back(status);
+        ASSERT(status == statuses[doc_id]);
         id.push_back(doc_id);
     }
     ASSERT(words.size() <= server.GetDocumentCount());
     ASSERT(id.size() <= server.GetDocumentCount());
     ASSERT(statuses.size() <= server.GetDocumentCount());
 
+
     ASSERT(statuses[0] == DocumentStatus::ACTUAL);
     ASSERT(statuses[1] == DocumentStatus::ACTUAL);
-    ASSERT(correct_words[0][0] == words[0][0]);
+    for (int i = 0; i <= 1; i++) {
+        for (int j = 0; j < 1; j++) {
+            ASSERT(correct_words[i][j] == words[i][j]);
+        }
+    }
     ASSERT(correct_words[1][1] == words[1][1]);
     ASSERT(words[0].size() == 1);
     ASSERT(words[1].size() == 2);
