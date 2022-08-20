@@ -470,10 +470,6 @@ void TestMatchDocument() {
         ASSERT(status == statuses[doc_id]);
         id.push_back(doc_id);
     }
-    ASSERT(words.size() <= server.GetDocumentCount());
-    ASSERT(id.size() <= server.GetDocumentCount());
-    ASSERT(statuses.size() <= server.GetDocumentCount());
-
 
     ASSERT(statuses[0] == DocumentStatus::ACTUAL);
     ASSERT(statuses[1] == DocumentStatus::ACTUAL);
