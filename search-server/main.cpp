@@ -369,9 +369,8 @@ void TestPredicat() {
 
     vector<int> doc = { 4, 0, 2 };
     int i = 0;
-    const auto res = server.FindTopDocuments("white tall hat");
-    ASSERT(doc.size() == res.size());
-    for (const Document& document : server.FindTopDocuments("white tall hat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
+    const auto res = server.FindTopDocuments("white tall hat", [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; });
+    for (const Document& document : res) {
         ASSERT(document.id % 2 == 0);
         ASSERT(document.id == doc[i]);
         ++i;
@@ -457,30 +456,14 @@ void TestMatchDocument() {
     vector<DocumentStatus> correct_statuses = { DocumentStatus::ACTUAL,DocumentStatus::ACTUAL,DocumentStatus::ACTUAL,DocumentStatus::BANNED,DocumentStatus::BANNED };
 
     const int doc_count = server.GetDocumentCount();
-    vector<vector<string>> words;
-    vector<int> id;
-    vector<DocumentStatus> statuses;
+
     ASSERT(doc_count == correct_words.size());
     ASSERT(doc_count == correct_statuses.size());
     for (int doc_id = 0; doc_id < doc_count; ++doc_id) {
-        const auto [word, status] = server.MatchDocument("white hat -rabbit"s, doc_id);
-        words.push_back(word);
-        ASSERT(word == words[doc_id]);
-        statuses.push_back(status);
-        ASSERT(status == statuses[doc_id]);
-        id.push_back(doc_id);
+        const auto [words, statuses] = server.MatchDocument("white hat -rabbit"s, doc_id);
+        ASSERT(words == correct_words[doc_id]);
+        ASSERT(statuses == correct_statuses[doc_id]);
     }
-
-    ASSERT(statuses[0] == DocumentStatus::ACTUAL);
-    ASSERT(statuses[1] == DocumentStatus::ACTUAL);
-    for (int i = 0; i <= 1; i++) {
-        for (int j = 0; j < 1; j++) {
-            ASSERT(correct_words[i][j] == words[i][j]);
-        }
-    }
-    ASSERT(correct_words[1][1] == words[1][1]);
-    ASSERT(words[0].size() == 1);
-    ASSERT(words[1].size() == 2);
 
 }
 // Функция TestSearchServer является точкой входа для запуска тестов
