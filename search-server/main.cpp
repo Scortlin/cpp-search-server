@@ -370,6 +370,7 @@ void TestPredicat() {
     vector<int> doc = { 4, 0, 2 };
     int i = 0;
     const auto res = server.FindTopDocuments("white tall hat", [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; });
+    ASSERT(doc.size() == res.size());
     for (const Document& document : res) {
         ASSERT(document.id % 2 == 0);
         ASSERT(document.id == doc[i]);
