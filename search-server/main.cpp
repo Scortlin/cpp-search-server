@@ -90,7 +90,7 @@ public:
             throw invalid_argument{ "Отрицательный индекс при добавлении документа: " + to_string(document_id) };
         }
         if (documents_.count(document_id) > 0) {
-            throw invalid_argument("Попытка добавить документ c id ранее добавленного документа");
+            throw invalid_argument{ "Попытка добавить документ c id ранее добавленного документа:  " + to_string(document_id) };
         }
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double inv_word_count = 1.0 / words.size();
@@ -172,13 +172,13 @@ private:
     }
 
     vector<string> SplitIntoWordsNoStop(const string& text) const {
-        if (!IsValidWord(text)) { // Проверка наличия спецсимволов
-            throw invalid_argument{ "Некорректные символы в документе: " + text };
-        }
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
             if (!IsStopWord(word)) {
                 words.push_back(word);
+            }
+            if (!IsValidWord(word)) { // Проверка наличия спецсимволов
+                throw invalid_argument{ "Некорректные символы в слове: " + word };
             }
         }
         return words;
@@ -199,22 +199,18 @@ private:
     };
 
     QueryWord ParseQueryWord(string text) const {
-        for (const auto& query_word : SplitIntoWords(text)) { // Проверка наличия спецсимволов 
-            if (!IsValidWord(query_word)) {
-                throw invalid_argument{ "Некорректные символы в слове" + query_word };
-            }
+        if (!IsValidWord(text)) { // Проверка наличия спецсимволов 
+            throw invalid_argument{ "Некорректные символы в слове: " + text };
         }
         bool is_minus = false;
-        if (text[0] == '-')
-        {
+        if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
         }
         return { text, is_minus, IsStopWord(text) };
     }
 
-    struct Query
-    {
+    struct Query {
         set<string> plus_words;
         set<string> minus_words;
     };
@@ -233,8 +229,11 @@ private:
             }
         }
         for (const auto& query_minus_word : query.minus_words) { //Проверка для минус-слова
-            if (query_minus_word == "" || (query_minus_word[0] == '-')) {
-                throw invalid_argument("Неправильное минус-слово");
+            if (query_minus_word == "") {
+                throw invalid_argument{ "Неправильное минус-слово: Отсутствие текста после символа «минус» " + query_minus_word };
+            }
+            if (query_minus_word[0] == '-') {
+                throw invalid_argument{ "Неправильное минус-слово: Наличие более чем одного минуса  " + query_minus_word };
             }
         }
         return query;
