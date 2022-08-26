@@ -87,17 +87,14 @@ public:
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
         if (document_id < 0) { // Проверка для отрицательного id
-            throw invalid_argument("Отрицательный индекс при добавлении документа");
+            throw invalid_argument{ "Отрицательный индекс при добавлении документа: " + to_string(document_id) };
         }
         if (documents_.count(document_id) > 0) {
             throw invalid_argument("Попытка добавить документ c id ранее добавленного документа");
         }
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double inv_word_count = 1.0 / words.size();
-        if (!IsValidWord(document)) { // Проверка наличия спецсимволов
-            throw invalid_argument{ "Некорректные символы в документе: " + document };
-        }
-        id_indexes.push_back(document_id);
+        document_ids.push_back(document_id);
         for (const string& word : words) {
             word_to_document_freqs_[word][document_id] += inv_word_count;
         }
@@ -107,11 +104,6 @@ public:
     template <typename DocumentPredicate>
     vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
         const Query query = ParseQuery(raw_query);
-        for (const auto& query_minus_word : query.minus_words) { //Проверка для минус-слова
-            if (query_minus_word == "" || (query_minus_word[0] == '-')) {
-                throw invalid_argument("Неправильное минус-слово");
-            }
-        }
         auto matched_documents = FindAllDocuments(query, document_predicate);
         sort(matched_documents.begin(), matched_documents.end(), [](const Document& lhs, const Document& rhs) {
             if (abs(lhs.relevance - rhs.relevance) < ACCURACY) {
@@ -137,12 +129,6 @@ public:
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
         const Query query = ParseQuery(raw_query);
-
-        for (const auto& query_minus_word : query.minus_words) { //проверка для минус-слова
-            if (query_minus_word == "" || (query_minus_word[0] == '-')) {
-                throw invalid_argument("Неправильное минус-слово");
-            }
-        }
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
@@ -168,13 +154,7 @@ public:
         return documents_.size();
     }
     int GetDocumentId(int index) const {
-        const int id_indexes_size = static_cast<int>(id_indexes.size());
-        if (index >= 0 || index < id_indexes_size) {
-            return id_indexes.at(index);
-        }
-        else {
-            throw out_of_range("Неправильный индекс");
-        }
+        return document_ids.at(index);
     }
 
 private:
@@ -186,12 +166,15 @@ private:
     set<string> stop_words_;
     map<string, map<int, double>> word_to_document_freqs_;
     map<int, DocumentData> documents_;
-    vector<int> id_indexes;
+    vector<int> document_ids;
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
     }
 
     vector<string> SplitIntoWordsNoStop(const string& text) const {
+        if (!IsValidWord(text)) { // Проверка наличия спецсимволов
+            throw invalid_argument{ "Некорректные символы в документе: " + text };
+        }
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
             if (!IsStopWord(word)) {
@@ -247,6 +230,11 @@ private:
                 else {
                     query.plus_words.insert(query_word.data);
                 }
+            }
+        }
+        for (const auto& query_minus_word : query.minus_words) { //Проверка для минус-слова
+            if (query_minus_word == "" || (query_minus_word[0] == '-')) {
+                throw invalid_argument("Неправильное минус-слово");
             }
         }
         return query;
