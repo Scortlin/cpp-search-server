@@ -75,33 +75,30 @@ public:
     explicit SearchServer(const StringContainer& stop_words) {
         for (const auto& word : stop_words) {
             if (!IsValidWord(word)) {
-                throw invalid_argument("Некорректные символы в слове");
+                throw invalid_argument{ "Некорректные символы в слове: " + word };
             }
             stop_words_.insert(word);
         }
     }
 
-    explicit SearchServer(const string& stop_words_text) {
-        for (const string& word : SplitIntoWords(stop_words_text)) {
-            if (!IsValidWord(word)) {
-                throw invalid_argument("Некорректные символы в слове");
-            }
-            stop_words_.insert(word);
-        }
+    explicit SearchServer(const string& stop_words_text)
+        : SearchServer(SplitIntoWords(stop_words_text)) {
     }
-
-
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
-        if ((document_id < 0) || (documents_.count(document_id) > 0)) { // Проверка корректного id
-            throw invalid_argument("Неправильный индекс при добавлении документа");
+        if (document_id < 0) { // Проверка для отрицательного id
+            throw invalid_argument("Отрицательный индекс при добавлении документа");
+        }
+        if (documents_.count(document_id) > 0) {
+            throw invalid_argument("Попытка добавить документ c id ранее добавленного документа");
         }
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double inv_word_count = 1.0 / words.size();
+        if (!IsValidWord(document)) { // Проверка наличия спецсимволов
+            throw invalid_argument{ "Некорректные символы в документе: " + document };
+        }
+        id_indexes.push_back(document_id);
         for (const string& word : words) {
-            if (!IsValidWord(word)) { // Проверка наличия спецсимволов
-                throw invalid_argument("Некорректные символы в слове");
-            }
             word_to_document_freqs_[word][document_id] += inv_word_count;
         }
         documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
@@ -110,11 +107,6 @@ public:
     template <typename DocumentPredicate>
     vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
         const Query query = ParseQuery(raw_query);
-        for (const auto& query_word : SplitIntoWords(raw_query)) { // Проверка наличия спецсимволов
-            if (!IsValidWord(query_word)) {
-                throw invalid_argument("Некорректные символы в слове");
-            }
-        }
         for (const auto& query_minus_word : query.minus_words) { //Проверка для минус-слова
             if (query_minus_word == "" || (query_minus_word[0] == '-')) {
                 throw invalid_argument("Неправильное минус-слово");
@@ -145,14 +137,10 @@ public:
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
         const Query query = ParseQuery(raw_query);
-        for (const auto& query_word : SplitIntoWords(raw_query)) { // Проверка наличия спецсимволов
-            if (!IsValidWord(query_word)) {
-                throw invalid_argument("Некорректные символы в слове");
-            }
-        }
+
         for (const auto& query_minus_word : query.minus_words) { //проверка для минус-слова
             if (query_minus_word == "" || (query_minus_word[0] == '-')) {
-                throw invalid_argument("Непрвильное минус-слово");
+                throw invalid_argument("Неправильное минус-слово");
             }
         }
         vector<string> matched_words;
@@ -180,8 +168,9 @@ public:
         return documents_.size();
     }
     int GetDocumentId(int index) const {
-        if (index >= 0 && index < GetDocumentCount()) {
-            return index;
+        const int id_indexes_size = static_cast<int>(id_indexes.size());
+        if (index >= 0 || index < id_indexes_size) {
+            return id_indexes.at(index);
         }
         else {
             throw out_of_range("Неправильный индекс");
@@ -189,8 +178,7 @@ public:
     }
 
 private:
-    struct DocumentData
-    {
+    struct DocumentData {
         int rating;
         DocumentStatus status;
     };
@@ -198,7 +186,7 @@ private:
     set<string> stop_words_;
     map<string, map<int, double>> word_to_document_freqs_;
     map<int, DocumentData> documents_;
-
+    vector<int> id_indexes;
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
     }
@@ -221,14 +209,18 @@ private:
         return rating_sum / static_cast<int>(ratings.size());
     }
 
-    struct QueryWord
-    {
+    struct QueryWord {
         string data;
         bool is_minus;
         bool is_stop;
     };
 
     QueryWord ParseQueryWord(string text) const {
+        for (const auto& query_word : SplitIntoWords(text)) { // Проверка наличия спецсимволов 
+            if (!IsValidWord(query_word)) {
+                throw invalid_argument{ "Некорректные символы в слове" + query_word };
+            }
+        }
         bool is_minus = false;
         if (text[0] == '-')
         {
