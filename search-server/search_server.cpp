@@ -111,7 +111,7 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(const string& text) const {
     return { word, is_minus, IsStopWord(word) };
 }
 
-SearchServer::Query SearchServer::ParseQuery(const string& text) const { // S8 9.3 NEW
+SearchServer::Query SearchServer::ParseQuery(const string& text) const {
     Query query;
     for (const string& word : SplitIntoWords(text)) {
         QueryWord query_word = ParseQueryWord(word);

@@ -40,8 +40,8 @@ public:
 
 private:
     struct DocumentData {
-        int rating;
-        DocumentStatus status;
+        int rating = {};
+        DocumentStatus status = {};
     };
 
     std::set<std::string> stop_words_;
@@ -84,10 +84,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
         if (std::abs(lhs.relevance - rhs.relevance) < ACCURACY) {
             return lhs.rating > rhs.rating;
         }
-        else {
-            return lhs.relevance > rhs.relevance;
-        }
-        });
+            return lhs.relevance > rhs.relevance; });
     if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
         matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
     }
