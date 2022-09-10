@@ -7,5 +7,5 @@ ostream& operator<<(ostream& out, const Document& document) {
         << "document_id = "s << document.id << ", "s
         << "relevance = "s << document.relevance << ", "s
         << "rating = "s << document.rating << " }"s;
-    return out;//ccc
+    return out;//cccvweve
 }
