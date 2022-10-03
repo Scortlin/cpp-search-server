@@ -15,6 +15,8 @@ const double ACCURACY = 1e-6;
 
 class SearchServer {
 public:
+    std::set<int>::const_iterator begin() const;
+    std::set<int>::const_iterator end() const;
     struct Query {
         std::set<std::string> plus_words;
         std::set<std::string> minus_words;
@@ -22,7 +24,10 @@ public:
     template <typename StringContainer>
     SearchServer(const StringContainer& stop_words);
     SearchServer(const std::string& stop_words_text);
+    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
+
+    void RemoveDocument(int document_id);
     void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
 
     template <typename DocumentPredicate>
@@ -34,8 +39,6 @@ public:
     std::vector<Document> FindAllDocuments(const Query& query, DocumentPredicate document_predicate) const;
 
     int GetDocumentCount() const;
-    int GetDocumentId(int index) const;
-
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
 
 private:
@@ -45,13 +48,15 @@ private:
     };
 
     std::set<std::string> stop_words_;
+    std::set<std::string> words_;
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
     std::map<int, DocumentData> documents_;
-    std::vector<int> document_ids_;
+    std::set<int> document_ids_;
+    std::map<int, std::map<std::string, double>> document_to_word_freqs_;
+
 
     bool IsStopWord(const std::string& word) const;
     static bool IsValidWord(const std::string& word);
-
     std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
     static int ComputeAverageRating(const std::vector<int>& ratings);
 
@@ -64,7 +69,6 @@ private:
     Query ParseQuery(const std::string& text) const;
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
 };
-
 
 template<typename StringContainer>
 SearchServer::SearchServer(const StringContainer& stop_words) {
@@ -84,7 +88,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
         if (std::abs(lhs.relevance - rhs.relevance) < ACCURACY) {
             return lhs.rating > rhs.rating;
         }
-            return lhs.relevance > rhs.relevance; });
+        return lhs.relevance > rhs.relevance; });
     if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
         matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
     }

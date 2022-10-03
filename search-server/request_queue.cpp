@@ -9,7 +9,7 @@ vector<Document> RequestQueue::AddFindRequest(const string& raw_query, DocumentS
 }
 
 vector<Document> RequestQueue::AddFindRequest(const string& raw_query) {
-    const std::vector<Document> result = search_server_.FindTopDocuments(raw_query);
+    const vector<Document> result = search_server_.FindTopDocuments(raw_query);
     AddRequest(result.size());
     return result;
 }
