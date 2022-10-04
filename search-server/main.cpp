@@ -4,7 +4,6 @@
 #include "remove_duplicates.h"
 #include <iostream>
 #include <string>
-#include <vector>
 using namespace std;
 int main() {
     SearchServer search_server("and with"s);

@@ -6,7 +6,7 @@
 using namespace std;
 void RemoveDuplicates(SearchServer& search_server) {
 	set<int> remove_docs_ids;
-	map<set<string>, vector<int>> del_doc;
+	set<set<string>> del_doc;
 	for (const int document_id : search_server) {
 		map<string, double> word_freq = search_server.GetWordFrequencies(document_id);
 		set<string> words;
@@ -14,7 +14,7 @@ void RemoveDuplicates(SearchServer& search_server) {
 			words.insert(word);
 		}
 		if (del_doc.count(words) == 0) {
-			del_doc[words].push_back(document_id);
+			del_doc.insert(words);
 		}
 		else {
 			remove_docs_ids.insert(document_id);

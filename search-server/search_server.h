@@ -61,9 +61,9 @@ private:
     static int ComputeAverageRating(const std::vector<int>& ratings);
 
     struct QueryWord {
-        std::string data;
-        bool is_minus;
-        bool is_stop;
+        std::string data = {};
+        bool is_minus = {};
+        bool is_stop = {};
     };
     QueryWord ParseQueryWord(const std::string& text) const;
     Query ParseQuery(const std::string& text) const;
