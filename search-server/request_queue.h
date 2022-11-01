@@ -1,9 +1,6 @@
-#pragma once
-#include <deque>
-#include "search_server.h"
-
-
-
+#pragma once 
+#include <deque> 
+#include "search_server.h" 
 class RequestQueue {
 public:
     RequestQueue(const SearchServer& search_server)
@@ -11,13 +8,11 @@ public:
         , no_results_requests_(0)
         , current_time_(0) {
     }
-
     template <typename DocumentPredicate>
     std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate);
     std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status);
     std::vector<Document> AddFindRequest(const std::string& raw_query);
     int GetNoResultRequests() const;
-
 private:
     struct QueryResult {
         uint64_t timestamp;
@@ -29,6 +24,7 @@ private:
     uint64_t current_time_;
     const static int min_in_day_ = 1440;
     void AddRequest(int results_num);
+
 };
 
 template <typename DocumentPredicate>

@@ -1,37 +1,32 @@
-#include "test_example_functions.h" 
-
-#include <iostream> 
+#include "test_example_functions.h"
 
 using namespace std;
+
 void PrintDocument(const Document& document) {
-    cout << "{ "s
-        << "document_id = "s << document.id << ", "s
-        << "relevance = "s << document.relevance << ", "s
-        << "rating = "s << document.rating << " }"s << endl;
+    cout << "{ "
+        << "document_id = " << document.id << ", "
+        << "relevance = " << document.relevance << ", "
+        << "rating = " << document.rating << " }" << endl;
 }
 
-
-void PrintMatchDocumentResult(int document_id, const vector<string>& words, DocumentStatus status) {
+void PrintMatchDocumentResult(int document_id, const vector<string_view>& words, DocumentStatus status) {
     cout << "{ "s
         << "document_id = "s << document_id << ", "s
         << "status = "s << static_cast<int>(status) << ", "s
         << "words ="s;
-    for (const string& word : words) {
+    for (auto word : words) {
         cout << ' ' << word;
     }
-
     cout << "}"s << endl;
-
 }
 
-void AddDocument(SearchServer& search_server, int document_id, string document, DocumentStatus status,
+void AddDocument(SearchServer& search_server, int document_id, const string_view& document, DocumentStatus status,
     const vector<int>& ratings) {
     try {
         search_server.AddDocument(document_id, document, status, ratings);
     }
     catch (const invalid_argument& e) {
-        using namespace string_literals;
-        cout << "Error when adding document "s << document_id << ": "s << e.what() << endl;
+        cout << "Ошибка добавления документа "s << document_id << ": "s << e.what() << endl;
     }
 }
 
@@ -42,12 +37,12 @@ void FindTopDocuments(const SearchServer& search_server, const string& raw_query
             PrintDocument(document);
         }
     }
-    catch (const exception& e) {
+    catch (const invalid_argument& e) {
         cout << "Ошибка поиска: "s << e.what() << endl;
     }
 }
 
-void MatchDocuments(const SearchServer& search_server, const string& query) {
+void MatchDocuments(const SearchServer& search_server, string_view query) {
     try {
         cout << "Матчинг документов по запросу: "s << query << endl;
         const int document_count = search_server.GetDocumentCount();
@@ -58,7 +53,7 @@ void MatchDocuments(const SearchServer& search_server, const string& query) {
             }
         }
     }
-    catch (const exception& e) {
+    catch (const invalid_argument& e) {
         cout << "Ошибка матчинга документов на запрос "s << query << ": "s << e.what() << endl;
     }
 }

@@ -1,8 +1,7 @@
-#pragma once
-#include <iostream>
-#include <algorithm>
-#include <vector>
-
+#pragma once 
+#include <iostream> 
+#include <algorithm> 
+#include <vector> 
 template <typename Iterator>
 class IteratorRange {
 public:
@@ -11,12 +10,15 @@ public:
         , last_(end)
         , size_(distance(first_, last_)) {
     }
+
     Iterator begin() const {
         return first_;
     }
+
     Iterator end() const {
         return last_;
     }
+
     size_t size() const {
         return size_;
     }
@@ -25,8 +27,9 @@ private:
     Iterator first_, last_;
     size_t size_;
 };
+
 template <typename Iterator>
-ostream& operator<<(ostream& out, const IteratorRange<Iterator>& range) {
+std::ostream& operator<<(std::ostream& out, const IteratorRange<Iterator>& range) {
     for (Iterator it = range.begin(); it != range.end(); ++it) {
         out << *it;
     }
@@ -38,13 +41,14 @@ class Paginator {
 public:
     Paginator(Iterator begin, Iterator end, size_t page_size) {
         for (size_t left = distance(begin, end); left > 0;) {
-            const size_t current_page_size = min(page_size, left);
+            const size_t current_page_size = std::min(page_size, left);
             const Iterator current_page_end = next(begin, current_page_size);
             pages_.push_back({ begin, current_page_end });
             left -= current_page_size;
             begin = current_page_end;
         }
     }
+
     auto begin() const {
         return pages_.begin();
     }
@@ -56,7 +60,7 @@ public:
     }
 
 private:
-    vector<IteratorRange<Iterator>> pages_;
+    std::vector<IteratorRange<Iterator>> pages_;
 };
 
 template <typename Container>

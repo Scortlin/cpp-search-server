@@ -1,5 +1,4 @@
-#include "request_queue.h"
-
+#include "request_queue.h" 
 using namespace std;
 
 vector<Document> RequestQueue::AddFindRequest(const string& raw_query, DocumentStatus status) {

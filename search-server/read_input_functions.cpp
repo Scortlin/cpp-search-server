@@ -1,5 +1,5 @@
-#include "read_input_functions.h"
-#include <iostream>
+#include "read_input_functions.h" 
+#include <iostream> 
 using namespace std;
 
 string ReadLine() {
